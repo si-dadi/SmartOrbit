@@ -1,26 +1,82 @@
-asttokens==2.0.8
-backcall==0.2.0
-entrypoints==0.4
-executing==1.1.0
-ipykernel==6.16.0
-jedi==0.18.1
-jupyter_client==7.3.5
-jupyter-core==4.11.1
-matplotlib-inline==0.1.6
-multipledispatch==1.0.0
-nest-asyncio==1.5.6
-parso==0.8.3
-pickleshare==0.7.5
-prompt-toolkit==3.0.31
-pure-eval==0.2.2
-pygame==2.5.1
-Pygments==2.13.0
-PyOpenGL==3.1.7
-PyOpenGL-accelerate==3.1.7
-pyperclip==1.8.2
-pyrr==0.10.3
-pyzmq==24.0.1
-screeninfo==0.8.1
-stack-data==0.5.1
-tornado==6.2
-wcwidth==0.2.5
+astropy             5.3.3
+astroquery          0.4.6
+asttokens           2.0.8
+backcall            0.2.0
+beautifulsoup4      4.12.2
+certifi             2023.7.22
+charset-normalizer  3.2.0
+contourpy           1.1.1
+cycler              0.11.0
+debugpy             1.6.3
+decorator           5.1.1
+entrypoints         0.4
+executing           1.1.0
+fonttools           4.42.1
+html5lib            1.1
+idna                3.4
+importlib-metadata  6.8.0
+ipykernel           6.16.0
+ipython             8.5.0
+jaraco.classes      3.3.0
+jedi                0.18.1
+jplephem            2.19
+jupyter_client      7.3.5
+jupyter-core        4.11.1
+keyring             24.2.0
+kiwisolver          1.4.5
+llvmlite            0.40.1
+matplotlib          3.8.0
+matplotlib-inline   0.1.6
+more-itertools      10.1.0
+multipledispatch    1.0.0
+nest-asyncio        1.5.6
+numba               0.57.1
+numpy               1.24.4
+packaging           23.1
+Panda3D             1.10.13
+panda3d-gltf        1.0.0
+panda3d-simplepbr   0.10
+pandas              2.1.0
+parso               0.8.3
+pickleshare         0.7.5
+Pillow              10.0.1
+pip                 23.2.1
+plotly              5.17.0
+poliastro           0.17.0
+prompt-toolkit      3.0.31
+psutil              5.9.2
+pure-eval           0.2.2
+pyerfa              2.0.0.3
+pygame              2.5.1
+Pygments            2.13.0
+PyOpenGL            3.1.7
+PyOpenGL-accelerate 3.1.7
+pyparsing           3.1.1
+pyperclip           1.8.2
+pyrr                0.10.3
+python-dateutil     2.8.2
+pytz                2023.3.post1
+pyvo                1.4.2
+pywin32             304
+pywin32-ctypes      0.2.2
+PyYAML              6.0.1
+pyzmq               24.0.1
+requests            2.31.0
+scipy               1.11.2
+screeninfo          0.8.1
+setuptools          68.0.0
+sgp4                2.22
+six                 1.16.0
+skyfield            1.46
+soupsieve           2.5
+stack-data          0.5.1
+tenacity            8.2.3
+tornado             6.2
+traitlets           5.4.0
+tzdata              2023.3
+urllib3             2.0.4
+ursina              6.0.0
+wcwidth             0.2.5
+webencodings        0.5.1
+wheel               0.38.4
+zipp                3.17.0
