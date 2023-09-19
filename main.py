@@ -1,7 +1,6 @@
 from ursina import *
 import math
 import random
-# from SmartOrbitSatellite import SmartOrbitSatellite
 
 app = Ursina()
 
@@ -17,7 +16,7 @@ earth = Entity(
     model="sphere",
     texture=earth_texture,
     scale=2,
-    subdivisions=256,  # Increase subdivisions for smoother appearance
+    subdivisions=256,
     position=(0, 0, 0),
 )
 
@@ -37,7 +36,7 @@ satellites = []
 orbital_positions = []
 
 class SmartOrbitSatellite(Entity):
-    def __init__(self, name, semi_major_axis, eccentricity, inclination, time_factor):
+    def __init__(self, name, semi_major_axis, eccentricity, inclination):
         super().__init__(
             model="models/uploads_files_1985975_star+wars.obj",  # Replace with your satellite model
             scale=(0.025, 0.025, 0.025),
@@ -46,7 +45,6 @@ class SmartOrbitSatellite(Entity):
         self.semi_major_axis = semi_major_axis
         self.eccentricity = eccentricity
         self.inclination = math.radians(inclination)  # Convert inclination to radians
-        self.time_factor = time_factor  # Store the time factor
 
         # Calculate the semi-minor axis based on the eccentricity and semi-major axis
         self.semi_minor_axis = self.semi_major_axis * math.sqrt(1 - self.eccentricity**2)
@@ -63,36 +61,43 @@ class SmartOrbitSatellite(Entity):
         z = y_orbit_plane * math.cos(self.inclination)
         self.position = (x, y, z)
 
-        # Create an entity to represent the orbit
-        self.orbit_entity = Entity(model=Cylinder(height=0.01), scale=(self.semi_major_axis*2, 1, self.semi_minor_axis*2), color=color.azure.tint(-0.5), double_sided=True)
-        
+        # Initialize velocity
+        v_circular = math.sqrt(G * earth_mass / r)  # Velocity for a circular orbit at this distance
+        v_eccentricity_factor = math.sqrt((1 + self.eccentricity) / (1 - self.eccentricity))  # Factor to adjust for eccentricity
+        v_x_orbit_plane = -v_circular * v_eccentricity_factor * math.sin(math.radians(self.true_anomaly))
+        v_y_orbit_plane = v_circular * v_eccentricity_factor * math.cos(math.radians(self.true_anomaly))
+        self.velocity_x = v_x_orbit_plane
+        self.velocity_y = v_y_orbit_plane * math.sin(self.inclination)
+        self.velocity_z = v_y_orbit_plane * math.cos(self.inclination)
+
     def update(self):
-        # Update true anomaly based on Kepler's laws
-        mean_motion = math.sqrt(G * earth_mass / (self.semi_major_axis**3)) * time.dt * self.time_factor
-        mean_anomaly = mean_motion
-        eccentric_anomaly = mean_anomaly + self.eccentricity * math.sin(mean_anomaly) * (1.0 + self.eccentricity * math.cos(mean_anomaly))
-        self.true_anomaly += mean_motion
+        # Calculate gravitational force
+        r_squared = self.position[0]**2 + self.position[1]**2 + self.position[2]**2
+        f_gravity_magnitude = G * earth_mass / r_squared
 
-        # Calculate position in orbital plane
-        r = self.semi_major_axis * (1 - self.eccentricity**2) / (1 + self.eccentricity * math.cos(math.radians(self.true_anomaly)))
-        
-        # Convert to spherical coordinates
-        theta = math.radians(self.true_anomaly)
-        phi = math.radians(90 - self.inclination)
-        
-        x = r * math.sin(phi) * math.cos(theta)
-        y = r * math.sin(phi) * math.sin(theta)
-        z = r * math.cos(phi)
+        # Calculate acceleration due to gravity
+        acceleration_x = -f_gravity_magnitude * self.position[0] / math.sqrt(r_squared)
+        acceleration_y = -f_gravity_magnitude * self.position[1] / math.sqrt(r_squared)
+        acceleration_z = -f_gravity_magnitude * self.position[2] / math.sqrt(r_squared)
 
-        # Update position relative to global coordinates or Earth entity
-        self.global_position = (x, y, z)
+        # Update velocity based on acceleration
+        dt_factor=time_factors[current_time_factor_index]   # time factor to speed up the simulation 
+        dt=time.dt*dt_factor 
+        self.velocity_x += acceleration_x * dt
+        self.velocity_y += acceleration_y * dt
+        self.velocity_z += acceleration_z * dt
+
+        # Update position based on velocity
+        self.position[0] += self.velocity_x * dt
+        self.position[1] += self.velocity_y * dt
+        self.position[2] += self.velocity_z * dt
 
 def add_smart_orbit_satellite():
     name = f"Satellite{len(satellites) + 1}"
     semi_major_axis = random.uniform(2, 20)
     eccentricity = random.uniform(0, 1)
     inclination = random.uniform(0, 180)
-    satellite = SmartOrbitSatellite(name, semi_major_axis, eccentricity, inclination, time_factors[current_time_factor_index])
+    satellite = SmartOrbitSatellite(name, semi_major_axis, eccentricity, inclination)
     satellites.append(satellite)
     satellite.parent = earth  # Add the satellite as a child of the Earth entity
     print(f"Smart satellite '{name}' added! (Semi-major axis: {semi_major_axis}, Eccentricity: {eccentricity}, Inclination: {inclination})")
