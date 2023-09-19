@@ -1,5 +1,7 @@
 from ursina import *
-import math
+from poliastro.bodies import Earth
+from poliastro.twobody import Orbit
+from astropy import units as u
 import random
 
 app = Ursina()
@@ -36,71 +38,38 @@ satellites = []
 orbital_positions = []
 
 class SmartOrbitSatellite(Entity):
-    def __init__(self, name, semi_major_axis, eccentricity, inclination):
+    def __init__(self, name):
         super().__init__(
             model="models/uploads_files_1985975_star+wars.obj",  # Replace with your satellite model
             scale=(0.025, 0.025, 0.025),
         )
         self.name = name
-        self.semi_major_axis = semi_major_axis
-        self.eccentricity = eccentricity
-        self.inclination = math.radians(inclination)  # Convert inclination to radians
 
-        # Calculate the semi-minor axis based on the eccentricity and semi-major axis
-        self.semi_minor_axis = self.semi_major_axis * math.sqrt(1 - self.eccentricity**2)
+        # Random orbital parameters
+        semi_major_axis = random.uniform(2, 20) * u.km
+        eccentricity = random.uniform(0, 1) * u.one
+        inclination = random.uniform(0, 180) * u.deg
 
-        # Initialize the true anomaly (angle from closest approach)
-        self.true_anomaly = random.uniform(0, 360)
-
-        # Set initial position on surface of Earth in direction of semi-major axis
-        r = self.semi_major_axis * (1 - self.eccentricity**2) / (1 + self.eccentricity * math.cos(math.radians(self.true_anomaly)))
-        x_orbit_plane = r * math.cos(math.radians(self.true_anomaly))
-        y_orbit_plane = r * math.sin(math.radians(self.true_anomaly))
-        x = x_orbit_plane
-        y = y_orbit_plane * math.sin(self.inclination)
-        z = y_orbit_plane * math.cos(self.inclination)
-        self.position = (x, y, z)
-
-        # Initialize velocity
-        v_circular = math.sqrt(G * earth_mass / r)  # Velocity for a circular orbit at this distance
-        v_eccentricity_factor = math.sqrt((1 + self.eccentricity) / (1 - self.eccentricity))  # Factor to adjust for eccentricity
-        v_x_orbit_plane = -v_circular * v_eccentricity_factor * math.sin(math.radians(self.true_anomaly))
-        v_y_orbit_plane = v_circular * v_eccentricity_factor * math.cos(math.radians(self.true_anomaly))
-        self.velocity_x = v_x_orbit_plane
-        self.velocity_y = v_y_orbit_plane * math.sin(self.inclination)
-        self.velocity_z = v_y_orbit_plane * math.cos(self.inclination)
+        # Create an orbit using poliastro
+        self.orbit = Orbit.from_classical(Earth, semi_major_axis, eccentricity,
+                                          inclination, 0 * u.deg, 0 * u.deg, 0 * u.deg)
 
     def update(self):
-        # Calculate gravitational force
-        r_squared = self.position[0]**2 + self.position[1]**2 + self.position[2]**2
-        f_gravity_magnitude = G * earth_mass / r_squared
-
-        # Calculate acceleration due to gravity
-        acceleration_x = -f_gravity_magnitude * self.position[0] / math.sqrt(r_squared)
-        acceleration_y = -f_gravity_magnitude * self.position[1] / math.sqrt(r_squared)
-        acceleration_z = -f_gravity_magnitude * self.position[2] / math.sqrt(r_squared)
-
-        # Update velocity based on acceleration
-        dt_factor=time_factors[current_time_factor_index]   # time factor to speed up the simulation 
+        # Propagate the orbit to the current time
+        dt_factor=time_factors[current_time_factor_index] / 100  # time factor to speed up the simulation 
         dt=time.dt*dt_factor 
-        self.velocity_x += acceleration_x * dt
-        self.velocity_y += acceleration_y * dt
-        self.velocity_z += acceleration_z * dt
+        self.orbit = self.orbit.propagate(dt * u.s)
 
-        # Update position based on velocity
-        self.position[0] += self.velocity_x * dt
-        self.position[1] += self.velocity_y * dt
-        self.position[2] += self.velocity_z * dt
+        # Update the position of the satellite
+        r = self.orbit.r.to(u.km).value / earth.scale_x   # Convert position to Earth radii
+        self.position = (r[0], r[1], r[2])
 
 def add_smart_orbit_satellite():
     name = f"Satellite{len(satellites) + 1}"
-    semi_major_axis = random.uniform(2, 20)
-    eccentricity = random.uniform(0, 1)
-    inclination = random.uniform(0, 180)
-    satellite = SmartOrbitSatellite(name, semi_major_axis, eccentricity, inclination)
+    satellite = SmartOrbitSatellite(name)
     satellites.append(satellite)
-    satellite.parent = earth  # Add the satellite as a child of the Earth entity
-    print(f"Smart satellite '{name}' added! (Semi-major axis: {semi_major_axis}, Eccentricity: {eccentricity}, Inclination: {inclination})")
+    satellite.parent = earth   # Add the satellite as a child of the Earth entity
+    print(f"Smart satellite '{name}' added!")
 
 # Create buttons and other UI elements...
 # Create buttons
@@ -117,15 +86,15 @@ smart_button = Button(
 )
 
 # Create buttons to control time factor
-time_factors = [1, 5, 10, 100, 1000, 5000, 10000, 20000]
-current_time_factor_index = 5  # Index of the current time factor
+time_factors = [1, 5, 10, 100, 1000, 10000, 25000, 50000, 100000]
+current_time_factor_index = len(time_factors) // 2   # Start with a medium time factor
 
-time_factor_text = Text(text=f'Time Factor: {time_factors[current_time_factor_index]}x', position=(0, -0.4),
-                        origin=(0, 0), scale=0.75)
+time_factor_text = Text(text=f'Time Factor: {time_factors[current_time_factor_index]}x', position=(0,-0.4),
+                        origin=(0, 0), scale=2)
 
 def update_time_factor_text():
     global current_time_factor_index
-    time_factor_text.text = f'Time Factor: {time_factors[current_time_factor_index]}x'
+    time_factor_text.text=f'Time Factor: {time_factors[current_time_factor_index]}x'
 
 def speed_up_time():
     global current_time_factor_index
@@ -139,7 +108,7 @@ def slow_down_time():
         current_time_factor_index -= 1
         update_time_factor_text()
 
-slow_down_button = Button(
+slow_down_button=Button(
     text='slow',
     color=color.gray,
     position=(-0.05, -0.45),
@@ -148,7 +117,7 @@ slow_down_button = Button(
     on_click=slow_down_time
 )
 
-speed_up_button = Button(
+speed_up_button=Button(
     text='fast',
     color=color.gray,
     position=(0.05, -0.45),
