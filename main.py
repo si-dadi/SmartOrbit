@@ -1,7 +1,7 @@
-from SmartOrbitSatellite import SmartOrbitSatellite
 from ursina import *
 import math
 import random
+# from SmartOrbitSatellite import SmartOrbitSatellite
 
 app = Ursina()
 
@@ -36,17 +36,68 @@ earth_mass = 5.972e24  # Earth's mass (kg)
 satellites = []
 orbital_positions = []
 
+class SmartOrbitSatellite(Entity):
+    def __init__(self, name, semi_major_axis, eccentricity, inclination, time_factor):
+        super().__init__(
+            model="models/uploads_files_1985975_star+wars.obj",  # Replace with your satellite model
+            scale=(0.025, 0.025, 0.025),
+        )
+        self.name = name
+        self.semi_major_axis = semi_major_axis
+        self.eccentricity = eccentricity
+        self.inclination = math.radians(inclination)  # Convert inclination to radians
+        self.time_factor = time_factor  # Store the time factor
+
+        # Calculate the semi-minor axis based on the eccentricity and semi-major axis
+        self.semi_minor_axis = self.semi_major_axis * math.sqrt(1 - self.eccentricity**2)
+
+        # Initialize the true anomaly (angle from closest approach)
+        self.true_anomaly = random.uniform(0, 360)
+
+        # Set initial position on surface of Earth in direction of semi-major axis
+        r = self.semi_major_axis * (1 - self.eccentricity**2) / (1 + self.eccentricity * math.cos(math.radians(self.true_anomaly)))
+        x_orbit_plane = r * math.cos(math.radians(self.true_anomaly))
+        y_orbit_plane = r * math.sin(math.radians(self.true_anomaly))
+        x = x_orbit_plane
+        y = y_orbit_plane * math.sin(self.inclination)
+        z = y_orbit_plane * math.cos(self.inclination)
+        self.position = (x, y, z)
+
+        # Create an entity to represent the orbit
+        self.orbit_entity = Entity(model=Cylinder(height=0.01), scale=(self.semi_major_axis*2, 1, self.semi_minor_axis*2), color=color.azure.tint(-0.5), double_sided=True)
+        
+    def update(self):
+        # Update true anomaly based on Kepler's laws
+        mean_motion = math.sqrt(G * earth_mass / (self.semi_major_axis**3)) * time.dt * self.time_factor
+        mean_anomaly = mean_motion
+        eccentric_anomaly = mean_anomaly + self.eccentricity * math.sin(mean_anomaly) * (1.0 + self.eccentricity * math.cos(mean_anomaly))
+        self.true_anomaly += mean_motion
+
+        # Calculate position in orbital plane
+        r = self.semi_major_axis * (1 - self.eccentricity**2) / (1 + self.eccentricity * math.cos(math.radians(self.true_anomaly)))
+        
+        # Convert to spherical coordinates
+        theta = math.radians(self.true_anomaly)
+        phi = math.radians(90 - self.inclination)
+        
+        x = r * math.sin(phi) * math.cos(theta)
+        y = r * math.sin(phi) * math.sin(theta)
+        z = r * math.cos(phi)
+
+        # Update position relative to global coordinates or Earth entity
+        self.global_position = (x, y, z)
+
 def add_smart_orbit_satellite():
     name = f"Satellite{len(satellites) + 1}"
     semi_major_axis = random.uniform(2, 20)
-    semi_minor_axis = random.uniform(2, semi_major_axis - 1)
-    eccentricity = math.sqrt(1 - (semi_minor_axis ** 2 / semi_major_axis ** 2))
+    eccentricity = random.uniform(0, 1)
     inclination = random.uniform(0, 180)
-    satellite = SmartOrbitSatellite(name, semi_major_axis, semi_minor_axis, eccentricity, inclination, time_factors[current_time_factor_index])
+    satellite = SmartOrbitSatellite(name, semi_major_axis, eccentricity, inclination, time_factors[current_time_factor_index])
     satellites.append(satellite)
     satellite.parent = earth  # Add the satellite as a child of the Earth entity
-    print(f"Smart satellite '{name}' added!")
+    print(f"Smart satellite '{name}' added! (Semi-major axis: {semi_major_axis}, Eccentricity: {eccentricity}, Inclination: {inclination})")
 
+# Create buttons and other UI elements...
 # Create buttons
 Button(text='Add Dummy Satellite', color=color.gray, position=(-0.7, 0.45), scale=(0.35, 0.05), text_size=5)
 
@@ -59,9 +110,6 @@ smart_button = Button(
     text_size=5,
     on_click=add_smart_orbit_satellite
 )
-
-# Create a list to store orbital trail positions
-orbital_positions = []
 
 # Create buttons to control time factor
 time_factors = [1, 5, 10, 100, 1000, 5000, 10000, 20000]
@@ -105,12 +153,12 @@ speed_up_button = Button(
 )
 
 camera_min_distance = 3
-camera_max_distance = sky.scale_x - 1  # You already have this defined
+camera_max_distance = sky.scale_x - 1
 
 def update():
-    global satellites, orbital_positions
+    global satellites
 
-    # Rotate the Earth
+    # Rotate the Earth and update satellites...
     earth.rotation_y -= time.dt * time_factors[current_time_factor_index] * 360 / 86400  # 360 degrees in 24 hours
 
 app.run()
