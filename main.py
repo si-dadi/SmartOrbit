@@ -21,16 +21,25 @@ camera = EditorCamera(
     target=(0, 0, 0),
 )
 
-earth_texture = load_texture("textures/wallpaperflare.com_wallpaper (2).jpg")
-earth = Entity(
-    model="sphere",
-    texture=earth_texture,
-    scale=2,
-    subdivisions=256,
-    position=(0, 0, 0),
-)
+# earth_texture = load_texture("textures/wallpaperflare.com_wallpaper (2).jpg")
+# earth = Entity(
+#     model="sphere",
+#     texture=earth_texture,
+#     scale=2,
+#     subdivisions=256,
+#     position=(0, 0, 0),
+# )
+earth = Entity(model="models/EarthClouds_1_12756.glb", scale=0.002, position=(0, 0, 0), render_queue=1)
 
-sun_light = DirectionalLight(color=color.white, y=2, z=-3, shadows=True)
+sun_light1 = DirectionalLight(color=color.white, y=60, z=-90, shadows=True, range=100)
+sun_light1.rotation = (10, 30, 30)
+sun_light2 = DirectionalLight(color=color.white, y=60, z=-90, shadows=True, range=100)
+sun_light2.rotation = (10, 30, 30)
+sun_light3 = DirectionalLight(color=color.white, y=60, z=-90, shadows=True, range=100)
+sun_light3.rotation = (10, 30, 30)
+sun_light4 = DirectionalLight(color=color.yellow, y=60, z=-90, shadows=True, range=100)
+sun_light4.rotation = (10, 30, 30)
+sun_light = DirectionalLight(color=color.yellow, y=60, z=-90, shadows=True, range=100)
 sun_light.rotation = (10, 30, 30)
 
 sky_texture = load_texture("textures/black-color-solid-background-1920x1080.png")
@@ -54,7 +63,7 @@ class SmartOrbitSatellite(Entity):
     def __init__(self, name, semi_major_axis, eccentricity, inclination):
         super().__init__(
             model="models/uploads_files_1985975_star+wars.obj",  # Replace with your satellite model
-            scale=(0.025, 0.025, 0.025),
+            scale=(0.025, 0.025, 0.025), render_queue=0,
         )
         self.name = name
 
@@ -81,13 +90,17 @@ class SmartOrbitSatellite(Entity):
         r = (
             self.orbit.r.to(u.km).value / earth.scale_x
         )  # Convert position to Earth radii
-        self.position = (r[0], r[1], r[2])
+        self.position = (
+            r[0] * earth.scale_x,
+            r[1] * earth.scale_y,
+            r[2] * earth.scale_z,
+        )
 
 class SmartOrbitSatelliteDummy(Entity):
     def __init__(self, name, semi_major_axis, eccentricity, inclination):
         super().__init__(
             model="models/uploads_files_1985975_star+wars.obj",  # Replace with your satellite model
-            scale=(0.025, 0.025, 0.025),
+            scale=(0.025, 0.025, 0.025), render_queue=0,
         )
         self.name = name
 
@@ -114,7 +127,11 @@ class SmartOrbitSatelliteDummy(Entity):
         r = (
             self.orbit.r.to(u.km).value / earth.scale_x
         )  # Convert position to Earth radii
-        self.position = (r[0], r[1], r[2])
+        self.position = (
+            r[0] * earth.scale_x,
+            r[1] * earth.scale_y,
+            r[2] * earth.scale_z,
+        )
 
 
 
