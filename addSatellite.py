@@ -8,9 +8,6 @@ from tkinter import simpledialog
 from world import *
 from timeControl import *
 from timeControl import time_factors, current_time_factor_index, getTimeFactor
-# Constants
-G = 6.67430e-11  # Gravitational constant (m^3/kg/s^2)
-earth_mass = 5.972e24  # Earth's mass (kg)
 
 # Initial conditions
 satellites = []
@@ -23,7 +20,6 @@ class SmartOrbitSatellite(Entity):
             scale=(0.025, 0.025, 0.025), render_queue=0,
         )
         self.name = name
-        self.time_factor = getTimeFactor()
 
         # Create an orbit using poliastro
         self.orbit = Orbit.from_classical(
@@ -61,7 +57,7 @@ class SmartOrbitSatelliteDummy(Entity):
             scale=(0.025, 0.025, 0.025), render_queue=0,
         )
         self.name = name
-        self.time_factor = getTimeFactor()
+
         # Create an orbit using poliastro
         self.orbit = Orbit.from_classical(
             Earth,
@@ -100,6 +96,13 @@ def add_smart_orbit_satellite_manual():
     # Create a custom dialog
     dialog = tk.Toplevel(root)
     dialog.title("Enter satellite parameters")
+    dialog.geometry("400x200")
+    # Calculate the screen width and height
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x = (screen_width - 400) // 2
+    y = (screen_height - 200) // 2
+    dialog.geometry(f"400x200+{x}+{y}")
 
     # Create input fields
     name_label = tk.Label(dialog, text="Name:")
@@ -142,14 +145,17 @@ def add_smart_orbit_satellite_manual():
         satellite = SmartOrbitSatellite(name, semi_major_axis, eccentricity, inclination)
         satellite.parent = universalReferencepoint   # Add the satellite as a child of the Earth entity
         satellites.append(satellite)
-
+        update_satellite_buttons()
+        # print(satellites)
         print(f"Smart satellite '{name}' added! (semi-major axis: {semi_major_axis} km, eccentricity: {eccentricity}, inclination: {inclination} degrees)")
         dialog.destroy()
 
     submit_button = tk.Button(dialog, text="Submit", command=submit)
-    submit_button.grid(row=4, columnspan=2)
+    submit_button.grid(row=4, column=0, columnspan=2)
+    or_label = tk.Label(dialog, text="OR")
+    or_label.grid(row=5, column=0, columnspan=2)
     randomAdd = tk.Button(dialog, text="Add Randomly", command=add_smart_orbit_satellite_dummy)
-    randomAdd.grid(row=5, columnspan=2)
+    randomAdd.grid(row=6, column=0, columnspan=2)
 
     # Wait for the dialog to be destroyed
     root.wait_window(dialog)
@@ -158,7 +164,9 @@ def add_smart_orbit_satellite_manual():
     if 'name' in globals():
         # Create the satellite with the user's input
         satellite = SmartOrbitSatellite(name, semi_major_axis, eccentricity, inclination)
+        satellite.parent = universalReferencepoint
         satellites.append(satellite)
+        update_satellite_names()
 
 # Create a button to add a Smart Orbit Satellite
 smart_button = Button(
@@ -169,3 +177,52 @@ smart_button = Button(
     text_size=5,
     on_click=add_smart_orbit_satellite_manual,
 )
+
+panel = WindowPanel(
+    title="SmartOrbit Satellites",
+    content=(
+        Text("Click one to shift to its POV!", text_size=5),
+        ButtonList(button_dict={}, sub_element_args={"color": color.light_gray}),
+    ),
+    draggable=True,
+    resizable=True,
+    min_width=200,
+    max_width=400,
+    min_height=300,
+    max_height=400,
+    background_color=color.rgba(255, 255, 255, 0.25),
+)
+
+# Function to update the displayed satellite names and buttons
+def update_satellite_buttons():
+    button_list = panel.content[1].content[0]  # Access the ButtonList element
+    button_list.clear()
+    for satellite_name, satellite_entity in satellites:
+        button = Button(
+            text=satellite_name,
+            color=color.light_gray,
+            on_click=shift_camera_to_satellite,
+            args=[satellite_entity],
+        )
+        button.tooltip = Tooltip(f"View {satellite_name}")
+        button_list.append(button)
+
+
+def shift_camera_to_satellite(satellite_entity):
+    camera.position = satellite_entity.position + (0, 0, 5)
+    camera.look_at(satellite_entity.position)
+
+# Function to reset the camera position to (0, 0, 0)
+def reset_camera():
+    camera.position = (0, 0, 0)
+    camera.rotation = (0, 0, 0)
+
+reset_camera_button = Button(
+    parent=panel.content[0],
+    text="Reset Camera",
+    scale=(0.3, 0.1),
+    on_click=reset_camera,
+    position=(0,0)
+)
+reset_camera_button.tooltip = Tooltip("Reset Camera Position")
+
