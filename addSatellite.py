@@ -1,4 +1,5 @@
 from ursina import *
+from ursina.prefabs.dropdown_menu import DropdownMenu, DropdownMenuButton
 from poliastro.bodies import Earth
 from poliastro.twobody import Orbit
 from astropy import units as u
@@ -13,11 +14,13 @@ from timeControl import time_factors, current_time_factor_index, getTimeFactor
 satellites = []
 orbital_positions = []
 
+
 class SmartOrbitSatellite(Entity):
     def __init__(self, name, semi_major_axis, eccentricity, inclination):
         super().__init__(
             model="models/uploads_files_1985975_star+wars.obj",  # Replace with your satellite model
-            scale=(0.025, 0.025, 0.025), render_queue=0,
+            scale=(0.025, 0.025, 0.025),
+            render_queue=0,
         )
         self.name = name
 
@@ -47,6 +50,7 @@ class SmartOrbitSatellite(Entity):
             r[1] * earth.scale_y,
             r[2] * earth.scale_z,
         )
+
     print(f"using: {time_factors[current_time_factor_index]}")
 
 
@@ -54,7 +58,8 @@ class SmartOrbitSatelliteDummy(Entity):
     def __init__(self, name, semi_major_axis, eccentricity, inclination):
         super().__init__(
             model="models/uploads_files_1985975_star+wars.obj",  # Replace with your satellite model
-            scale=(0.025, 0.025, 0.025), render_queue=0,
+            scale=(0.025, 0.025, 0.025),
+            render_queue=0,
         )
         self.name = name
 
@@ -84,6 +89,7 @@ class SmartOrbitSatelliteDummy(Entity):
             r[1] * earth.scale_y,
             r[2] * earth.scale_z,
         )
+
     print(f"using: {time_factors[current_time_factor_index]}")
 
 
@@ -131,9 +137,11 @@ def add_smart_orbit_satellite_manual():
         semi_major_axis = float(semi_major_axis_entry.get())
         eccentricity = float(eccentricity_entry.get())
         inclination = float(inclination_entry.get())
-        satellite.parent = universalReferencepoint   # Add the satellite as a child of the Earth entity
+        satellite.parent = (
+            universalReferencepoint  # Add the satellite as a child of the Earth entity
+        )
         dialog.destroy()
-    
+
     def add_smart_orbit_satellite_dummy():
         # Generate random orbital parameters
         name = f"Satellite{len(satellites) + 1}"
@@ -142,31 +150,40 @@ def add_smart_orbit_satellite_manual():
         inclination = random.uniform(0, 180)
 
         # Create the satellite with the random parameters
-        satellite = SmartOrbitSatellite(name, semi_major_axis, eccentricity, inclination)
-        satellite.parent = universalReferencepoint   # Add the satellite as a child of the Earth entity
+        satellite = SmartOrbitSatellite(
+            name, semi_major_axis, eccentricity, inclination
+        )
+        satellite.parent = (
+            universalReferencepoint  # Add the satellite as a child of the Earth entity
+        )
         satellites.append(satellite)
-        update_satellite_buttons()
         # print(satellites)
-        print(f"Smart satellite '{name}' added! (semi-major axis: {semi_major_axis} km, eccentricity: {eccentricity}, inclination: {inclination} degrees)")
+        print(
+            f"Smart satellite '{name}' added! (semi-major axis: {semi_major_axis} km, eccentricity: {eccentricity}, inclination: {inclination} degrees)"
+        )
         dialog.destroy()
 
     submit_button = tk.Button(dialog, text="Submit", command=submit)
     submit_button.grid(row=4, column=0, columnspan=2)
     or_label = tk.Label(dialog, text="OR")
     or_label.grid(row=5, column=0, columnspan=2)
-    randomAdd = tk.Button(dialog, text="Add Randomly", command=add_smart_orbit_satellite_dummy)
+    randomAdd = tk.Button(
+        dialog, text="Add Randomly", command=add_smart_orbit_satellite_dummy
+    )
     randomAdd.grid(row=6, column=0, columnspan=2)
 
     # Wait for the dialog to be destroyed
     root.wait_window(dialog)
 
     # Check if the dialog was submitted
-    if 'name' in globals():
+    if "name" in globals():
         # Create the satellite with the user's input
-        satellite = SmartOrbitSatellite(name, semi_major_axis, eccentricity, inclination)
+        satellite = SmartOrbitSatellite(
+            name, semi_major_axis, eccentricity, inclination
+        )
         satellite.parent = universalReferencepoint
         satellites.append(satellite)
-        update_satellite_names()
+
 
 # Create a button to add a Smart Orbit Satellite
 smart_button = Button(
@@ -178,51 +195,36 @@ smart_button = Button(
     on_click=add_smart_orbit_satellite_manual,
 )
 
-panel = WindowPanel(
-    title="SmartOrbit Satellites",
-    content=(
-        Text("Click one to shift to its POV!", text_size=5),
-        ButtonList(button_dict={}, sub_element_args={"color": color.light_gray}),
-    ),
-    draggable=True,
-    resizable=True,
-    min_width=200,
-    max_width=400,
-    min_height=300,
-    max_height=400,
-    background_color=color.rgba(255, 255, 255, 0.25),
-)
 
-# Function to update the displayed satellite names and buttons
-def update_satellite_buttons():
-    button_list = panel.content[1].content[0]  # Access the ButtonList element
-    button_list.clear()
-    for satellite_name, satellite_entity in satellites:
-        button = Button(
-            text=satellite_name,
-            color=color.light_gray,
-            on_click=shift_camera_to_satellite,
-            args=[satellite_entity],
-        )
-        button.tooltip = Tooltip(f"View {satellite_name}")
-        button_list.append(button)
-
-
-def shift_camera_to_satellite(satellite_entity):
-    camera.position = satellite_entity.position + (0, 0, 5)
-    camera.look_at(satellite_entity.position)
-
-# Function to reset the camera position to (0, 0, 0)
 def reset_camera():
     camera.position = (0, 0, 0)
     camera.rotation = (0, 0, 0)
 
-reset_camera_button = Button(
-    parent=panel.content[0],
-    text="Reset Camera",
-    scale=(0.3, 0.1),
-    on_click=reset_camera,
-    position=(0,0)
-)
-reset_camera_button.tooltip = Tooltip("Reset Camera Position")
 
+satellite_options = ["Satellite " + str(i) for i in range(1, 10)]
+satellite_dropdown = DropdownMenu(
+    "Satellite Selector >",
+    buttons=[DropdownMenuButton(option) for option in satellite_options],
+    default_option=satellite_options[0],
+    origin=(0,0)
+)
+
+# Create a WindowPanel for the UI
+panel = WindowPanel(
+    title="SmartOrbit Satellites",
+    content=(
+        Text("Click one to shift to its POV!", text_size=2),
+        satellite_dropdown,
+        Button(
+            text="Reset Camera",
+            color=color.gray,
+            on_click=reset_camera,
+            text_size=5,
+        ),
+    ),
+    background_color=color.rgba(255, 255, 255, 0.25),
+)
+
+# Set the panel position to the bottom right corner
+panel.y = panel.panel.scale_y / 2 * panel.scale_y
+panel.x = panel.panel.scale_x / 0.85 * panel.scale_x
