@@ -1,4 +1,5 @@
 from ursina import *
+from ursina.shaders import lit_with_shadows_shader
 from ursina.prefabs.dropdown_menu import DropdownMenu, DropdownMenuButton
 from poliastro.bodies import Earth
 from poliastro.twobody import Orbit
@@ -9,6 +10,7 @@ from tkinter import simpledialog
 from world import *
 from timeControl import *
 from timeControl import time_factors, current_time_factor_index, getTimeFactor
+import math
 
 # Initial conditions
 satellites = []
@@ -18,7 +20,7 @@ orbital_positions = []
 class SmartOrbitSatellite(Entity):
     def __init__(self, name, semi_major_axis, eccentricity, inclination):
         super().__init__(
-            model="models/uploads_files_1985975_star+wars.obj",  # Replace with your satellite model
+            model="models/uploads_files_1985975_star+wars.obj",  
             scale=(0.025, 0.025, 0.025),
             render_queue=0,
         )
@@ -33,6 +35,14 @@ class SmartOrbitSatellite(Entity):
             0 * u.deg,
             0 * u.deg,
             0 * u.deg,
+        )
+        
+        self.orbit_circle = Entity(
+            model=Circle(500, mode='line', thickness=0.1),
+            color=color.white,
+            scale=(2 * semi_major_axis, 2 * semi_major_axis * math.sqrt(1 - eccentricity**2)),
+            shader=lit_with_shadows_shader,
+            parent=universalReferencepoint,
         )
 
     def update(self):
@@ -50,8 +60,6 @@ class SmartOrbitSatellite(Entity):
             r[1] * earth.scale_y,
             r[2] * earth.scale_z,
         )
-
-    print(f"using: {time_factors[current_time_factor_index]}")
 
 
 class SmartOrbitSatelliteDummy(Entity):
@@ -73,6 +81,14 @@ class SmartOrbitSatelliteDummy(Entity):
             0 * u.deg,
             0 * u.deg,
         )
+        # Create an orbit visualization using a circle
+        self.orbit_circle = Entity(
+            model=Circle(500, mode='line', thickness=1),
+            color=color.white,
+            scale=(2 * semi_major_axis, 2 * semi_major_axis * math.sqrt(1 - eccentricity**2)),
+            shader=lit_with_shadows_shader,
+            parent=self,
+        )
 
     def update(self):
         # Propagate the orbit to the current time
@@ -89,8 +105,6 @@ class SmartOrbitSatelliteDummy(Entity):
             r[1] * earth.scale_y,
             r[2] * earth.scale_z,
         )
-
-    print(f"using: {time_factors[current_time_factor_index]}")
 
 
 def add_smart_orbit_satellite_manual():
@@ -209,22 +223,22 @@ satellite_dropdown = DropdownMenu(
     origin=(0,0)
 )
 
-# Create a WindowPanel for the UI
-panel = WindowPanel(
-    title="SmartOrbit Satellites",
-    content=(
-        Text("Click one to shift to its POV!", text_size=2),
-        satellite_dropdown,
-        Button(
-            text="Reset Camera",
-            color=color.gray,
-            on_click=reset_camera,
-            text_size=5,
-        ),
-    ),
-    background_color=color.rgba(255, 255, 255, 0.25),
-)
+# # Create a WindowPanel for the UI
+# panel = WindowPanel(
+#     title="SmartOrbit Satellites",
+#     content=(
+#         Text("Click one to shift to its POV!", text_size=2),
+#         satellite_dropdown,
+#         Button(
+#             text="Reset Camera",
+#             color=color.gray,
+#             on_click=reset_camera,
+#             text_size=5,
+#         ),
+#     ),
+#     background_color=color.rgba(255, 255, 255, 0.25),
+# )
 
-# Set the panel position to the bottom right corner
-panel.y = panel.panel.scale_y / 2 * panel.scale_y
-panel.x = panel.panel.scale_x / 0.85 * panel.scale_x
+# # Set the panel position to the bottom right corner
+# panel.y = panel.panel.scale_y / 2 * panel.scale_y
+# panel.x = panel.panel.scale_x / 0.85 * panel.scale_x
