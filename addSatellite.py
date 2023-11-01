@@ -125,6 +125,7 @@ def add_smart_orbit_satellite_manual():
         satellite.parent = universalReferencepoint
         satellites.append(satellite)
         dialog.destroy()
+        update_camera_follow_buttons()  # Call the update function here
 
     def add_smart_orbit_satellite_dummy():
         name = f"Satellite{len(satellites) + 1}"
@@ -147,6 +148,7 @@ def add_smart_orbit_satellite_manual():
             f"Smart satellite '{name}' added! (semi-major axis: {semi_major_axis}, semi-minor axis: {semi_minor_axis}, inclination: {inclination}, RAAN: {raan}, ARGP: {argp}, fuel left: {fuel_left}, priority: {priority})"
         )
         dialog.destroy()
+        update_camera_follow_buttons()  # Call the update function here
 
     submit_button = tk.Button(dialog, text="Submit", command=submit)
     submit_button.grid(row=8, column=0, columnspan=2)
@@ -165,6 +167,7 @@ def add_smart_orbit_satellite_manual():
         )
         satellite.parent = universalReferencepoint
         satellites.append(satellite)
+        update_camera_follow_buttons()  # Call the update function here
 
 add_satellite_button = Button(
     text="Add Satellite",
@@ -175,28 +178,8 @@ add_satellite_button = Button(
     on_click=add_smart_orbit_satellite_manual,
 )
 
-shift_camera_button = Button(
-    text="Shift Camera",
-    color=color.gray,
-    position=(-0.7, 0.3),
-    scale=(0.35, 0.05),
-    text_size=5,
-)
-
 cameraShifted = False
 following_satellite = None  # Add a variable to track the satellite being followed
-
-def shift_camera():
-    global following_satellite, cameraShifted
-    if not cameraShifted:
-        if satellites:
-            following_satellite = satellites[0]
-            shift_camera_button.text = "Following " + following_satellite.name
-            cameraShifted = True
-    else:
-        reset_camera()
-
-shift_camera_button.on_click = shift_camera
 
 def update():
     if cameraShifted and following_satellite:
@@ -210,7 +193,56 @@ def update():
 def reset_camera():
     global following_satellite, cameraShifted
     following_satellite = None
-    shift_camera_button.text = "Shift Camera"
     camera.position = (0, 0, 0)
     camera.rotation = (0, 0, 0)
     cameraShifted = False
+
+# Initialize camera follow buttons only if there are satellites
+camera_follow_buttons = None
+
+def shift_camera_to_satellite(satellite):
+    global following_satellite, cameraShifted
+    following_satellite = satellite
+    cameraShifted = True
+
+def reset_camera():
+    global following_satellite, cameraShifted
+    following_satellite = None
+    camera.position = (0, 0, 0)
+    camera.rotation = (0, 0, 0)
+    cameraShifted = False
+
+def update_camera_follow_buttons():
+    global camera_follow_buttons
+    button_list = []
+
+    if satellites:
+        for i, satellite in enumerate(satellites):
+            follow_button = Button(
+                text=f"Follow {satellite.name}",
+                color=color.gray,
+                position=(-0.7, 0.2 - 0.07 * (i + 1)),  # Offset from "Reset Camera" button
+                scale=(0.35, 0.05),
+                text_size=5,
+                on_click=Func(shift_camera_to_satellite, satellite),
+            )
+            button_list.append(follow_button)
+
+        # Add the "Reset Camera" button at the top
+        reset_button = Button(
+            text="Reset Camera",
+            color=color.gray,
+            position=(-0.7, 0.25),
+            scale=(0.35, 0.05),
+            text_size=5,
+            on_click=reset_camera,
+        )
+        button_list.append(reset_button)
+
+        if camera_follow_buttons:
+            camera_follow_buttons.delete()
+        
+        camera_follow_buttons = ButtonGroup(options=button_list)
+
+if satellites:
+    update_camera_follow_buttons()
