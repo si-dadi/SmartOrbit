@@ -6,19 +6,27 @@ from poliastro.twobody import Orbit
 from astropy import units as u
 import random
 import tkinter as tk
-from tkinter import simpledialog
 from world import *
 from timeControl import *
-from timeControl import time_factors, current_time_factor_index, getTimeFactor
+from timeControl import getTimeFactor
 import math
 import time
 
-# Initial conditions
-satellites = []
-orbital_positions = []
+satellites = []         # List of all satellites, *** to be used in ACAS prediction
 
 class SmartOrbitSatellite(Entity):
-    def __init__(self, name, semi_major_axis, semi_minor_axis, inclination, raan, argp, fuel_left, priority):
+    def __init__(
+        self,
+        name,
+        semi_major_axis,
+        semi_minor_axis,
+        inclination,
+        raan,
+        argp,
+        fuel_left,
+        priority,
+        collision_threshold,
+    ):
         super().__init__(
             model="models/satellite_model.obj",
             scale=(0.025, 0.025, 0.025),
@@ -32,6 +40,7 @@ class SmartOrbitSatellite(Entity):
         self.argp = argp
         self.fuel_left = fuel_left
         self.priority = priority
+        self.collision_threshold = collision_threshold
 
         eccentricity = math.sqrt(1 - ((semi_minor_axis * semi_minor_axis) / (semi_major_axis * semi_major_axis)))
         self.orbit = Orbit.from_classical(
@@ -48,15 +57,14 @@ class SmartOrbitSatellite(Entity):
         dt_factor = getTimeFactor() / 1e5
         dt = time.dt * dt_factor
         self.orbit = self.orbit.propagate(dt * u.s)
-        r = (
-            self.orbit.r.to(u.km).value / earth.scale_x
-        )
+        r = self.orbit.r.to(u.km).value / earth.scale_x
         self.position = (
             r[0] * earth.scale_x,
             r[1] * earth.scale_y,
             r[2] * earth.scale_z,
         )
         # print(self.orbit, r, self.position)
+
 
 def add_smart_orbit_satellite_manual():
     global satellites
@@ -90,6 +98,10 @@ def add_smart_orbit_satellite_manual():
     fuel_left_entry = tk.Entry(dialog)
     priority_label = tk.Label(dialog, text="Priority (bw [0,5]; Increasing Order):")
     priority_entry = tk.Entry(dialog)
+    collision_threshold_label = tk.Label(
+        dialog, text="Collision Threshold Distance (bw [0, 0.1]):"
+    )
+    collision_threshold_entry = tk.Entry(dialog)
 
     name_label.grid(row=0, column=0)
     name_entry.grid(row=0, column=1)
@@ -107,9 +119,11 @@ def add_smart_orbit_satellite_manual():
     fuel_left_entry.grid(row=6, column=1)
     priority_label.grid(row=7, column=0)
     priority_entry.grid(row=7, column=1)
+    collision_threshold_label.grid(row=8, column=0)
+    collision_threshold_entry.grid(row=8, column=1)
 
     def submit():
-        global name, semi_major_axis, semi_minor_axis, inclination, fuel_left, priority
+        global name, semi_major_axis, semi_minor_axis, inclination, raan, argp, fuel_left, priority, collision_threshold
         name = name_entry.get()
         semi_major_axis = float(semi_major_axis_entry.get())
         semi_minor_axis = float(semi_minor_axis_entry.get())
@@ -118,12 +132,23 @@ def add_smart_orbit_satellite_manual():
         argp = float(argp_entry.get())
         fuel_left = float(fuel_left_entry.get())
         priority = int(priority_entry.get())
+        collision_threshold = float(collision_threshold_entry.get())
 
         satellite = SmartOrbitSatellite(
-            name, semi_major_axis, semi_minor_axis, inclination, raan, argp, fuel_left, priority
+            name,
+            semi_major_axis,
+            semi_minor_axis,
+            inclination,
+            raan,
+            argp,
+            fuel_left,
+            priority,
+            collision_threshold
         )
         satellite.parent = universalReferencepoint
         satellites.append(satellite)
+        print(satellites)
+
         dialog.destroy()
         update_camera_follow_buttons()  # Call the update function here
 
@@ -136,38 +161,53 @@ def add_smart_orbit_satellite_manual():
         argp = random.uniform(0, 360)
         fuel_left = random.uniform(0, 100)
         priority = random.randint(0, 5)
+        collision_threshold = random.uniform(0, 0.1)
 
         satellite = SmartOrbitSatellite(
-            name, semi_major_axis, semi_minor_axis, inclination, raan, argp, fuel_left, priority
+            name,
+            semi_major_axis,
+            semi_minor_axis,
+            inclination,
+            raan,
+            argp,
+            fuel_left,
+            priority,
+            collision_threshold,
         )
-        satellite.parent = (
-            universalReferencepoint
-        )
+        satellite.parent = universalReferencepoint
         satellites.append(satellite)
-        print(
-            f"Smart satellite '{name}' added! (semi-major axis: {semi_major_axis}, semi-minor axis: {semi_minor_axis}, inclination: {inclination}, RAAN: {raan}, ARGP: {argp}, fuel left: {fuel_left}, priority: {priority})"
-        )
+        print(satellites)
+
         dialog.destroy()
-        update_camera_follow_buttons()  # Call the update function here
+        update_camera_follow_buttons()
 
     submit_button = tk.Button(dialog, text="Submit", command=submit)
-    submit_button.grid(row=8, column=0, columnspan=2)
+    submit_button.grid(row=9, column=0, columnspan=2)
     or_label = tk.Label(dialog, text="OR")
-    or_label.grid(row=9, column=0, columnspan=2)
+    or_label.grid(row=10, column=0, columnspan=2)
     randomAdd = tk.Button(
         dialog, text="Add Randomly", command=add_smart_orbit_satellite_dummy
     )
-    randomAdd.grid(row=10, column=0, columnspan=2)
+    randomAdd.grid(row=11, column=0, columnspan=2)
 
     root.wait_window(dialog)
 
     if "name" in globals():
         satellite = SmartOrbitSatellite(
-            name, semi_major_axis, semi_minor_axis, inclination, fuel_left, priority
+            name,
+            semi_major_axis,
+            semi_minor_axis,
+            inclination,
+            raan,
+            argp,
+            fuel_left,
+            priority,
+            collision_threshold,
         )
         satellite.parent = universalReferencepoint
         satellites.append(satellite)
         update_camera_follow_buttons()  # Call the update function here
+
 
 add_satellite_button = Button(
     text="Add Satellite",
@@ -181,36 +221,32 @@ add_satellite_button = Button(
 cameraShifted = False
 following_satellite = None  # Add a variable to track the satellite being followed
 
+
 def update():
     if cameraShifted and following_satellite:
         camera.position = 2 * following_satellite.position
         # camera.look_at(earth)   # TODO: Fix this
-    
-    earth.rotation_y -= (
-        time.dt * getTimeFactor() * 360 / 86400
-    )
 
-def reset_camera():
-    global following_satellite, cameraShifted
-    following_satellite = None
-    camera.position = (0, 0, 0)
-    camera.rotation = (0, 0, 0)
-    cameraShifted = False
+    earth.rotation_y -= time.dt * getTimeFactor() * 360 / 86400
+
 
 # Initialize camera follow buttons only if there are satellites
 camera_follow_buttons = None
+
 
 def shift_camera_to_satellite(satellite):
     global following_satellite, cameraShifted
     following_satellite = satellite
     cameraShifted = True
 
+
 def reset_camera():
     global following_satellite, cameraShifted
     following_satellite = None
     camera.position = (0, 0, 0)
     camera.rotation = (0, 0, 0)
     cameraShifted = False
+
 
 def update_camera_follow_buttons():
     global camera_follow_buttons
@@ -221,7 +257,10 @@ def update_camera_follow_buttons():
             follow_button = Button(
                 text=f"Follow {satellite.name}",
                 color=color.gray,
-                position=(-0.7, 0.2 - 0.07 * (i + 1)),  # Offset from "Reset Camera" button
+                position=(
+                    -0.7,
+                    0.2 - 0.06 * (i + 1),
+                ),  # Offset from "Reset Camera" button
                 scale=(0.35, 0.05),
                 text_size=5,
                 on_click=Func(shift_camera_to_satellite, satellite),
@@ -241,8 +280,12 @@ def update_camera_follow_buttons():
 
         if camera_follow_buttons:
             camera_follow_buttons.delete()
-        
+
         camera_follow_buttons = ButtonGroup(options=button_list)
+
 
 if satellites:
     update_camera_follow_buttons()
+
+def getSatellites():
+    return satellites
