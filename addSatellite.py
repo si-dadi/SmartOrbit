@@ -56,6 +56,7 @@ class SmartOrbitSatellite(Entity):
             r[1] * earth.scale_y,
             r[2] * earth.scale_z,
         )
+        # print(self.orbit, r, self.position)
 
 def add_smart_orbit_satellite_manual():
     global satellites
@@ -190,13 +191,13 @@ def shift_camera():
         if satellites:
             following_satellite = satellites[0]
             shift_camera_button.text = "Following " + following_satellite.name
-            camera.position = following_satellite.position
+            camera.position = 2*following_satellite.position
             camera.rotation = following_satellite.rotation
             cameraShifted = True
     else:
         reset_camera()
         cameraShifted = False
-    print(satellites[0].position, camera.position)
+    # print(satellites[0].position, camera.position)
 
 shift_camera_button.on_click = shift_camera
 
