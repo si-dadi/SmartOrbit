@@ -41,7 +41,7 @@ class SmartOrbitSatellite(Entity):
         self.fuel_left = fuel_left
         self.priority = priority
         self.collision_threshold = collision_threshold
-
+        
         eccentricity = math.sqrt(1 - ((semi_minor_axis * semi_minor_axis) / (semi_major_axis * semi_major_axis)))
         self.orbit = Orbit.from_classical(
             Earth,
@@ -53,6 +53,9 @@ class SmartOrbitSatellite(Entity):
             0 * u.deg,
         )
 
+    def __str__(self):
+        return f"SmartOrbitSatellite(name='{self.name}', semi_major_axis={self.semi_major_axis}, semi_minor_axis={self.semi_minor_axis}, inclination={self.inclination}, raan={self.raan}, argp={self.argp}, fuel_left={self.fuel_left}, priority={self.priority}, collision_threshold={self.collision_threshold}, position={self.position})"
+
     def update(self):
         dt_factor = getTimeFactor() / 1e5
         dt = time.dt * dt_factor
@@ -63,7 +66,7 @@ class SmartOrbitSatellite(Entity):
             r[1] * earth.scale_y,
             r[2] * earth.scale_z,
         )
-        # print(self.orbit, r, self.position)
+        # print(self.position)
 
 
 def add_smart_orbit_satellite_manual():
@@ -147,7 +150,7 @@ def add_smart_orbit_satellite_manual():
         )
         satellite.parent = universalReferencepoint
         satellites.append(satellite)
-        print(satellites)
+        print("Satellite data: ", satellites)
 
         dialog.destroy()
         update_camera_follow_buttons()  # Call the update function here
@@ -176,7 +179,7 @@ def add_smart_orbit_satellite_manual():
         )
         satellite.parent = universalReferencepoint
         satellites.append(satellite)
-        print(satellites)
+        print("Satellite data: ", satellites)
 
         dialog.destroy()
         update_camera_follow_buttons()
@@ -206,8 +209,8 @@ def add_smart_orbit_satellite_manual():
         )
         satellite.parent = universalReferencepoint
         satellites.append(satellite)
+        print("Satellite data: ", satellites)
         update_camera_follow_buttons()  # Call the update function here
-
 
 add_satellite_button = Button(
     text="Add Satellite",
@@ -220,7 +223,6 @@ add_satellite_button = Button(
 
 cameraShifted = False
 following_satellite = None  # Add a variable to track the satellite being followed
-
 
 def update():
     if cameraShifted and following_satellite:
