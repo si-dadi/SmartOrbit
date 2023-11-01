@@ -12,6 +12,7 @@ from timeControl import *
 from timeControl import time_factors, current_time_factor_index, getTimeFactor
 import math
 import time
+
 # Initial conditions
 satellites = []
 orbital_positions = []
@@ -33,7 +34,6 @@ class SmartOrbitSatellite(Entity):
         self.priority = priority
 
         eccentricity = math.sqrt(1 - ((semi_minor_axis * semi_minor_axis) / (semi_major_axis * semi_major_axis)))
-        # c = semi_major_axis * math.sqrt(1 - eccentricity*eccentricity)
         self.orbit = Orbit.from_classical(
             Earth,
             semi_major_axis * u.km,
@@ -43,8 +43,6 @@ class SmartOrbitSatellite(Entity):
             argp * u.deg,
             0 * u.deg,
         )
-        self.recent_positions = []  # Stores the last 100 positions sampled every 50ms
-        self.draw_orbit = Entity(parent=universalReferencepoint, render_queue=1)
 
     def update(self):
         dt_factor = getTimeFactor() / 1e5
@@ -58,9 +56,6 @@ class SmartOrbitSatellite(Entity):
             r[1] * earth.scale_y,
             r[2] * earth.scale_z,
         )
-
-        if len(self.recent_positions) >= 100:
-            self.recent_positions.pop(0)
 
 def add_smart_orbit_satellite_manual():
     global satellites
@@ -124,7 +119,7 @@ def add_smart_orbit_satellite_manual():
         priority = int(priority_entry.get())
 
         satellite = SmartOrbitSatellite(
-            name, semi_major_axis, semi_minor_axis, inclination, fuel_left, priority
+            name, semi_major_axis, semi_minor_axis, inclination, raan, argp, fuel_left, priority
         )
         satellite.parent = universalReferencepoint
         satellites.append(satellite)
@@ -133,12 +128,12 @@ def add_smart_orbit_satellite_manual():
     def add_smart_orbit_satellite_dummy():
         name = f"Satellite{len(satellites) + 1}"
         semi_major_axis = random.uniform(5, 20)
-        semi_minor_axis = random.uniform(5,semi_major_axis)
+        semi_minor_axis = random.uniform(5, semi_major_axis)
         inclination = random.uniform(0, 180)
         raan = random.uniform(0, 360)
-        argp  = random.uniform(0, 360)
-        fuel_left = random.uniform(0,100)
-        priority = random.randint(0,5)
+        argp = random.uniform(0, 360)
+        fuel_left = random.uniform(0, 100)
+        priority = random.randint(0, 5)
 
         satellite = SmartOrbitSatellite(
             name, semi_major_axis, semi_minor_axis, inclination, raan, argp, fuel_left, priority
@@ -170,7 +165,7 @@ def add_smart_orbit_satellite_manual():
         satellite.parent = universalReferencepoint
         satellites.append(satellite)
 
-smart_button = Button(
+add_satellite_button = Button(
     text="Add Satellite",
     color=color.gray,
     position=(-0.7, 0.38),
@@ -179,6 +174,36 @@ smart_button = Button(
     on_click=add_smart_orbit_satellite_manual,
 )
 
+shift_camera_button = Button(
+    text="Shift Camera",
+    color=color.gray,
+    position=(-0.7, 0.3),
+    scale=(0.35, 0.05),
+    text_size=5,
+)
+
+cameraShifted = False
+
+def shift_camera():
+    global following_satellite, cameraShifted
+    if not cameraShifted:
+        if satellites:
+            following_satellite = satellites[0]
+            shift_camera_button.text = "Following " + following_satellite.name
+            camera.position = following_satellite.position
+            camera.rotation = following_satellite.rotation
+            cameraShifted = True
+    else:
+        reset_camera()
+        cameraShifted = False
+    print(satellites[0].position, camera.position)
+
+shift_camera_button.on_click = shift_camera
+
 def reset_camera():
+    global following_satellite, cameraShifted
+    following_satellite = None
+    shift_camera_button.text = "Shift Camera"
     camera.position = (0, 0, 0)
     camera.rotation = (0, 0, 0)
+    cameraShifted = False
