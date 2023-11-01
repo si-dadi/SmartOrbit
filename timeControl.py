@@ -45,9 +45,3 @@ speed_up_button = Button(
     text_size=5,
     on_click=speed_up_time,
 )
-
-def update():
-    # Rotate the Earth and update satellites...
-    earth.rotation_y -= (
-        time.dt * time_factors[current_time_factor_index] * 360 / 86400
-    )

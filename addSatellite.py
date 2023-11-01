@@ -184,6 +184,7 @@ shift_camera_button = Button(
 )
 
 cameraShifted = False
+following_satellite = None  # Add a variable to track the satellite being followed
 
 def shift_camera():
     global following_satellite, cameraShifted
@@ -191,15 +192,20 @@ def shift_camera():
         if satellites:
             following_satellite = satellites[0]
             shift_camera_button.text = "Following " + following_satellite.name
-            camera.position = 2*following_satellite.position
-            camera.rotation = following_satellite.rotation
             cameraShifted = True
     else:
         reset_camera()
-        cameraShifted = False
-    # print(satellites[0].position, camera.position)
 
 shift_camera_button.on_click = shift_camera
+
+def update():
+    if cameraShifted and following_satellite:
+        camera.position = 2 * following_satellite.position
+        # camera.look_at(earth)   # TODO: Fix this
+    
+    earth.rotation_y -= (
+        time.dt * getTimeFactor() * 360 / 86400
+    )
 
 def reset_camera():
     global following_satellite, cameraShifted
