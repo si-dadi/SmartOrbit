@@ -209,7 +209,6 @@ def add_smart_orbit_satellite_manual():
             collision_threshold,
         )
         satellite.parent = universalReferencepoint
-        satellites.append(satellite)
         print("Satellite data: ", satellites)
         update_camera_follow_buttons()  # Call the update function here
 
@@ -225,18 +224,8 @@ add_satellite_button = Button(
 cameraShifted = False
 following_satellite = None  # Add a variable to track the satellite being followed
 
-def update():
-    if cameraShifted and following_satellite:
-        camera.position = 2 * following_satellite.position
-        # camera.look_at(earth)   # TODO: Fix this
-
-    earth.rotation_y -= time.dt * getTimeFactor() * 360 / 86400
-
-    update_alerts()
-
 # Initialize camera follow buttons only if there are satellites
 camera_follow_buttons = None
-
 
 def shift_camera_to_satellite(satellite):
     global following_satellite, cameraShifted
@@ -281,6 +270,16 @@ def update_camera_follow_buttons():
             on_click=reset_camera,
         )
         button_list.append(reset_button)
+    else:
+        reset_button = Button(
+            text="Reset Camera",
+            color=color.gray,
+            position=(-0.7, 0.25),
+            scale=(0.35, 0.05),
+            text_size=5,
+            on_click=reset_camera,
+        )
+        button_list.append(reset_button)
 
         if camera_follow_buttons:
             camera_follow_buttons.delete()
@@ -293,3 +292,54 @@ if satellites:
 
 def getSatellites():
     return satellites
+
+
+def calculate_distance(vec1, vec2):
+    dx = vec1[0] - vec2[0]
+    dy = vec1[1] - vec2[1]
+    dz = vec1[2] - vec2[2]
+    return math.sqrt(dx*dx + dy*dy + dz*dz)
+
+def predict_collision():
+    satellitesSnapshot = getSatellites()
+    
+    if(satellitesSnapshot.__len__() > 1):
+        print("Predicting collisions...")
+        targetSatellite = satellitesSnapshot[0]     #TODO: take user input for this
+
+        start_time = time.perf_counter()
+
+        for satellite in satellitesSnapshot:
+            if satellite == targetSatellite:
+                continue
+            distance = calculate_distance(targetSatellite.position, satellite.position)
+            if(distance <= max(targetSatellite.collision_threshold, satellite.collision_threshold)):
+                print("Collision between " + targetSatellite.name + " and " + satellite.name + " is predicted.")
+                print("distance: ", distance, "threshold: ", max(targetSatellite.collision_threshold, satellite.collision_threshold))
+                print("distance: ", distance, "threshold: ", max(targetSatellite.collision_threshold, satellite.collision_threshold))
+                print("Positions of the satellites: ", targetSatellite.position, satellite.position)
+
+                collision_alerts.append("Collision between " + targetSatellite.name + " and " + satellite.name + " is predicted. Seperation distance: " + str(distance))
+
+        end_time = time.perf_counter()
+        print("Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6))
+    
+    else:
+            print("Sitting Idle...")
+
+
+last_predict_time = 0
+def update():
+    global last_predict_time
+    if cameraShifted and following_satellite:
+        camera.position = 2 * following_satellite.position
+        # camera.look_at(earth)   # TODO: Fix this
+
+    earth.rotation_y -= time.dt * getTimeFactor() * 360 / 86400
+
+    update_alerts()
+
+    current_time = time.time()
+    if current_time - last_predict_time >= 1:
+        predict_collision()     #TODO: Call when user presses a button
+        last_predict_time = current_time
