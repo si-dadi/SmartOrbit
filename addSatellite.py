@@ -9,6 +9,7 @@ import tkinter as tk
 from world import *
 from timeControl import *
 from timeControl import getTimeFactor
+from collisionAlerts import *
 import math
 import time
 
@@ -231,6 +232,7 @@ def update():
 
     earth.rotation_y -= time.dt * getTimeFactor() * 360 / 86400
 
+    update_alerts()
 
 # Initialize camera follow buttons only if there are satellites
 camera_follow_buttons = None
