@@ -300,37 +300,37 @@ def calculate_distance(vec1, vec2):
     dz = vec1[2] - vec2[2]
     return math.sqrt(dx*dx + dy*dy + dz*dz)
 
+worst_prediction_time = 0
 def predict_collision():
     satellitesSnapshot = getSatellites()
     
     if(satellitesSnapshot.__len__() > 1):
-        print("Predicting collisions...")
-        targetSatellite = satellitesSnapshot[0]     #TODO: take user input for this
+        # print("Predicting collisions...")
+        # targetSatellite = satellitesSnapshot[0]     #TODO: take user input for this
 
         start_time = time.perf_counter()
 
         for satellite in satellitesSnapshot:
-            if satellite == targetSatellite:
-                continue
-            distance = calculate_distance(targetSatellite.position, satellite.position)
-            if(distance <= max(targetSatellite.collision_threshold, satellite.collision_threshold)):
-                print("Collision between " + targetSatellite.name + " and " + satellite.name + " is predicted.")
-                print("distance: ", distance, "threshold: ", max(targetSatellite.collision_threshold, satellite.collision_threshold))
-                print("distance: ", distance, "threshold: ", max(targetSatellite.collision_threshold, satellite.collision_threshold))
-                print("Positions of the satellites: ", targetSatellite.position, satellite.position)
-
-                collision_alerts.append("Collision between " + targetSatellite.name + " and " + satellite.name + " is predicted. Seperation distance: " + str(distance))
+            for moreSatellite in satellitesSnapshot:
+                if satellite == moreSatellite:
+                    continue
+                distance = calculate_distance(moreSatellite.position, satellite.position)
+                if(distance <= max(moreSatellite.collision_threshold, satellite.collision_threshold)):
+                    collision_alerts.append("Collision between " + moreSatellite.name + " and " + satellite.name + " is predicted. distance: " + str(distance))
 
         end_time = time.perf_counter()
         print("Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6))
+        worst_prediction_time = max(worst_prediction_time, (end_time - start_time))
     
-    else:
-            print("Sitting Idle...")
+    # else:
+    #         print("Sitting Idle...")
 
 
 last_predict_time = 0
+hard_coded_sampling_rate = 0.5
+sampling_rate = hard_coded_sampling_rate if hard_coded_sampling_rate > worst_prediction_time else (2 * worst_prediction_time)
 def update():
-    global last_predict_time
+    global last_predict_time, sampling_rate
     if cameraShifted and following_satellite:
         camera.position = 2 * following_satellite.position
         # camera.look_at(earth)   # TODO: Fix this
@@ -340,6 +340,6 @@ def update():
     update_alerts()
 
     current_time = time.time()
-    if current_time - last_predict_time >= 1:
+    if current_time - last_predict_time >= sampling_rate:
         predict_collision()     #TODO: Call when user presses a button
         last_predict_time = current_time
