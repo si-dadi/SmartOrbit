@@ -1,9 +1,16 @@
 from ursina import *
 from ursina.shaders import lit_with_shadows_shader
 from ursina.prefabs.dropdown_menu import DropdownMenu, DropdownMenuButton
+
 from poliastro.bodies import Earth
 from poliastro.twobody import Orbit
+from poliastro.plotting import OrbitPlotter3D
+
 from astropy import units as u
+
+from skyfield.api import load
+from skyfield.positionlib import Topos
+
 import random
 import tkinter as tk
 from world import *
@@ -215,7 +222,7 @@ def add_smart_orbit_satellite_manual():
 add_satellite_button = Button(
     text="Add Satellite",
     color=color.gray,
-    position=(-0.7, 0.38),
+    position=(-0.64, 0.4),
     scale=(0.35, 0.05),
     text_size=5,
     on_click=add_smart_orbit_satellite_manual,
@@ -252,7 +259,7 @@ def update_camera_follow_buttons():
                 color=color.gray,
                 position=(
                     -0.7,
-                    0.2 - 0.06 * (i + 1),
+                    (0.2 - 0.06 * (i + 1)),
                 ),  # Offset from "Reset Camera" button
                 scale=(0.35, 0.05),
                 text_size=5,
@@ -300,14 +307,10 @@ def calculate_distance(vec1, vec2):
     dz = vec1[2] - vec2[2]
     return math.sqrt(dx*dx + dy*dy + dz*dz)
 
-worst_prediction_time = 0
 def predict_collision():
     satellitesSnapshot = getSatellites()
     
     if(satellitesSnapshot.__len__() > 1):
-        # print("Predicting collisions...")
-        # targetSatellite = satellitesSnapshot[0]     #TODO: take user input for this
-
         start_time = time.perf_counter()
 
         for satellite in satellitesSnapshot:
@@ -320,15 +323,9 @@ def predict_collision():
 
         end_time = time.perf_counter()
         print("Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6))
-        worst_prediction_time = max(worst_prediction_time, (end_time - start_time))
-    
-    # else:
-    #         print("Sitting Idle...")
 
 
 last_predict_time = 0
-hard_coded_sampling_rate = 0.5
-sampling_rate = hard_coded_sampling_rate if hard_coded_sampling_rate > worst_prediction_time else (2 * worst_prediction_time)
 def update():
     global last_predict_time, sampling_rate
     if cameraShifted and following_satellite:
@@ -340,6 +337,6 @@ def update():
     update_alerts()
 
     current_time = time.time()
-    if current_time - last_predict_time >= sampling_rate:
+    if current_time - last_predict_time >= 0.5:
         predict_collision()     #TODO: Call when user presses a button
         last_predict_time = current_time
