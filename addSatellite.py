@@ -4,12 +4,8 @@ from ursina.prefabs.dropdown_menu import DropdownMenu, DropdownMenuButton
 
 from poliastro.bodies import Earth
 from poliastro.twobody import Orbit
-from poliastro.plotting import OrbitPlotter3D
 
 from astropy import units as u
-
-from skyfield.api import load
-from skyfield.positionlib import Topos
 
 import random
 import tkinter as tk
@@ -20,7 +16,8 @@ from collisionAlerts import *
 import math
 import time
 
-satellites = []         # List of all satellites, *** to be used in ACAS prediction
+satellites = []  # List of all satellites, *** to be used in ACAS prediction
+
 
 class SmartOrbitSatellite(Entity):
     def __init__(
@@ -49,8 +46,15 @@ class SmartOrbitSatellite(Entity):
         self.fuel_left = fuel_left
         self.priority = priority
         self.collision_threshold = collision_threshold
-        
-        eccentricity = math.sqrt(1 - ((semi_minor_axis * semi_minor_axis) / (semi_major_axis * semi_major_axis)))
+
+        eccentricity = math.sqrt(
+            1
+            - (
+                (semi_minor_axis * semi_minor_axis)
+                / (semi_major_axis * semi_major_axis)
+            )
+        )
+        self.eccentricity = eccentricity
         self.orbit = Orbit.from_classical(
             Earth,
             semi_major_axis * u.km,
@@ -154,7 +158,7 @@ def add_smart_orbit_satellite_manual():
             argp,
             fuel_left,
             priority,
-            collision_threshold
+            collision_threshold,
         )
         satellite.parent = universalReferencepoint
         satellites.append(satellite)
@@ -187,7 +191,7 @@ def add_smart_orbit_satellite_manual():
         )
         satellite.parent = universalReferencepoint
         satellites.append(satellite)
-        print("Satellite data: ", satellites)
+        # print("Satellite data: ", satellites)
 
         dialog.destroy()
         update_camera_follow_buttons()
@@ -216,8 +220,9 @@ def add_smart_orbit_satellite_manual():
             collision_threshold,
         )
         satellite.parent = universalReferencepoint
-        print("Satellite data: ", satellites)
+        # print("Satellite data: ", satellites)
         update_camera_follow_buttons()  # Call the update function here
+
 
 add_satellite_button = Button(
     text="Add Satellite",
@@ -233,6 +238,7 @@ following_satellite = None  # Add a variable to track the satellite being follow
 
 # Initialize camera follow buttons only if there are satellites
 camera_follow_buttons = None
+
 
 def shift_camera_to_satellite(satellite):
     global following_satellite, cameraShifted
@@ -297,35 +303,112 @@ def update_camera_follow_buttons():
 if satellites:
     update_camera_follow_buttons()
 
+
 def getSatellites():
     return satellites
 
 
-def calculate_distance(vec1, vec2):
+def calculate_euclidean_distance(vec1, vec2):
     dx = vec1[0] - vec2[0]
     dy = vec1[1] - vec2[1]
     dz = vec1[2] - vec2[2]
-    return math.sqrt(dx*dx + dy*dy + dz*dz)
+    return math.sqrt(dx * dx + dy * dy + dz * dz)
+
 
 def predict_collision():
     satellitesSnapshot = getSatellites()
-    
-    if(satellitesSnapshot.__len__() > 1):
+
+    if satellitesSnapshot.__len__() > 1:
         start_time = time.perf_counter()
 
         for satellite in satellitesSnapshot:
             for moreSatellite in satellitesSnapshot:
                 if satellite == moreSatellite:
                     continue
-                distance = calculate_distance(moreSatellite.position, satellite.position)
-                if(distance <= max(moreSatellite.collision_threshold, satellite.collision_threshold)):
-                    collision_alerts.append("Collision between " + moreSatellite.name + " and " + satellite.name + " is predicted. distance: " + str(distance))
+                distance = calculate_euclidean_distance(
+                    moreSatellite.position, satellite.position
+                )
+                if distance <= max(
+                    moreSatellite.collision_threshold, satellite.collision_threshold
+                ):
+                    collision_alerts.append(
+                        "Collision between "
+                        + moreSatellite.name
+                        + " and "
+                        + satellite.name
+                        + " is predicted. distance: "
+                        + str(distance)
+                    )
 
         end_time = time.perf_counter()
         print("Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6))
 
 
 last_predict_time = 0
+
+
+def predict_future_collisions(future_times):
+    satellitesSnapshot = getSatellites()
+    print("Called Me?...")
+    if satellitesSnapshot.__len__() > 1:
+        start_time = time.perf_counter()
+
+        for satellite in satellitesSnapshot:
+            satellite.orbit = Orbit.from_vectors(
+                Earth, satellite.orbit.r, satellite.orbit.v
+            )
+
+        for satellite in satellitesSnapshot:
+            for moreSatellite in satellitesSnapshot:
+                if satellite == moreSatellite:
+                    continue
+
+                future_positions_satellite = [
+                    satellite.orbit.propagate((1 / 86400) * time * u.s)
+                    for time in future_times
+                ]
+                future_positions_moreSatellite = [
+                    moreSatellite.orbit.propagate((1 / 86400) * time * u.s)
+                    for time in future_times
+                ]
+
+                for idx, (pos1, pos2) in enumerate(
+                    zip(future_positions_satellite, future_positions_moreSatellite)
+                ):
+                    relative_distance = calculate_euclidean_distance(
+                        (pos1.r / u.km), (pos2.r / u.km)
+                    )
+
+                    if relative_distance <= max(
+                        moreSatellite.collision_threshold, satellite.collision_threshold
+                    ):
+                        collision_time = future_times[idx]
+                        collision_alerts.append(
+                            f"Collision predicted between {moreSatellite.name} and {satellite.name} "
+                            f"in {collision_time / 3600:.3f} hours!"
+                        )
+                        break
+
+                    # else:
+                    #     print("Safe!!!")
+
+        end_time = time.perf_counter()
+        print("Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6))
+
+
+future_times = [t for t in range(1, 3600, 20)]  # 24 hours
+
+
+collision_button = Button(
+    text="Predict Collisions",
+    color=color.gray,
+    position=(0.65, 0.4),
+    scale=(0.35, 0.05),
+    text_size=5,
+    on_click=lambda: predict_future_collisions(future_times),
+)
+
+
 def update():
     global last_predict_time, sampling_rate
     if cameraShifted and following_satellite:
@@ -336,7 +419,7 @@ def update():
 
     update_alerts()
 
-    current_time = time.time()
-    if current_time - last_predict_time >= 0.5:
-        predict_collision()     #TODO: Call when user presses a button
-        last_predict_time = current_time
+    # current_time = time.time()
+    # if current_time - last_predict_time >= 0.5:
+    #     predict_future_collisions(future_times)  # TODO: Call when user presses a button
+    #     last_predict_time = current_time
