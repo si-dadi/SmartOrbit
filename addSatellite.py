@@ -343,13 +343,36 @@ def predict_collision():
         end_time = time.perf_counter()
         print("Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6))
 
+slider_value = 1      
+def getSliderValue():
+    slider_value = int(time_range_slider.value)
+    return slider_value
 
-last_predict_time = 0
+future_times = [t for t in range(1, slider_value, 1)]
 
+def getFutureTimes():
+    slider_value = getSliderValue()
+    future_times = [t for t in range(1, slider_value + 1, 1)]
+    return future_times
+
+sliderText = Text(text = 'Select Predition Time (in hrs)', position = (0.5, 0.45), text_size = 5, scale=0.75)
+time_range_slider = Slider(
+    dynamic=True, min=1, max=24, default=1, step=1, x=0.5, y=0.4, bar_color = color.gray, scale=0.5, on_value_changed = getSliderValue
+)
+
+collision_button = Button(
+text="Predict Collisions",
+color=color.gray,
+position=(0.65, 0.35),
+scale=(0.35, 0.05),
+text_size=5,
+on_click=lambda: predict_future_collisions(future_times),
+)
 
 def predict_future_collisions(future_times):
     satellitesSnapshot = getSatellites()
-    print("Called Me?...")
+    future_times = getFutureTimes()
+    # print("Called Me?...", slider_value, (future_times))
     if satellitesSnapshot.__len__() > 1:
         start_time = time.perf_counter()
 
@@ -358,7 +381,12 @@ def predict_future_collisions(future_times):
                 Earth, satellite.orbit.r, satellite.orbit.v
             )
 
+        # Initialize a flag to track whether a collision has been detected
+        collision_detected = False
+
         for satellite in satellitesSnapshot:
+            if collision_detected:
+                break  # Exit the loop if collision has already been detected
             for moreSatellite in satellitesSnapshot:
                 if satellite == moreSatellite:
                     continue
@@ -373,44 +401,83 @@ def predict_future_collisions(future_times):
                 ]
 
                 for idx, (pos1, pos2) in enumerate(
-                    zip(future_positions_satellite, future_positions_moreSatellite)
+                    zip(
+                        future_positions_satellite, future_positions_moreSatellite
+                    )
                 ):
                     relative_distance = calculate_euclidean_distance(
                         (pos1.r / u.km), (pos2.r / u.km)
                     )
 
                     if relative_distance <= max(
-                        moreSatellite.collision_threshold, satellite.collision_threshold
+                        moreSatellite.collision_threshold,
+                        satellite.collision_threshold,
                     ):
                         collision_time = future_times[idx]
                         collision_alerts.append(
                             f"Collision predicted between {moreSatellite.name} and {satellite.name} "
                             f"in {collision_time / 3600:.3f} hours!"
                         )
-                        break
-
-                    # else:
-                    #     print("Safe!!!")
+                        collision_detected = True
+                        break  # Exit the loop if a collision is detected
 
         end_time = time.perf_counter()
-        print("Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6))
+        print(
+            "Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6)
+        )
 
 
-future_times = [t for t in range(1, 3600, 20)]  # 24 hours
+# optimization 1
+# TODO: Test Performance Metrics
+# import numpy as np
 
+# def predict_future_collisions(future_times):
+#     satellitesSnapshot = getSatellites()
+#     print("Called Me?...")
+#     num_satellites = len(satellitesSnapshot)
+#     if num_satellites > 1:
+#         start_time = time.perf_counter()
 
-collision_button = Button(
-    text="Predict Collisions",
-    color=color.gray,
-    position=(0.65, 0.4),
-    scale=(0.35, 0.05),
-    text_size=5,
-    on_click=lambda: predict_future_collisions(future_times),
-)
+#         # Precompute future positions for all satellites
+#         future_positions = np.zeros((num_satellites, len(future_times), 3))
 
+#         for i, satellite in enumerate(satellitesSnapshot):
+#             satellite.orbit = Orbit.from_vectors(
+#                 Earth, satellite.orbit.r, satellite.orbit.v
+#             )
+#             future_positions[i] = np.array(
+#                 [
+#                     satellite.orbit.propagate((1 / 86400) * time * u.s).r.to(u.km).value
+#                     for time in future_times
+#                 ]
+#             )
+
+#         for i in range(num_satellites):
+#             for j in range(i + 1, num_satellites):
+#                 for idx, (pos1, pos2) in enumerate(
+#                     zip(future_positions[i], future_positions[j])
+#                 ):
+#                     relative_distance = calculate_euclidean_distance(
+#                         pos1, pos2
+#                     )
+
+#                     if relative_distance <= max(
+#                         satellitesSnapshot[i].collision_threshold,
+#                         satellitesSnapshot[j].collision_threshold,
+#                     ):
+#                         collision_time = future_times[idx]
+#                         collision_alerts.append(
+#                             f"Collision predicted between {satellitesSnapshot[j].name} and {satellitesSnapshot[i].name} "
+#                             f"in {collision_time / 3600:.3f} hours!"
+#                         )
+#                         break  # Exit the time loop if a collision is detected
+
+#         end_time = time.perf_counter()
+#         print(
+#             "Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6)
+#         )
 
 def update():
-    global last_predict_time, sampling_rate
     if cameraShifted and following_satellite:
         camera.position = 2 * following_satellite.position
         # camera.look_at(earth)   # TODO: Fix this
