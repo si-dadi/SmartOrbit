@@ -227,7 +227,7 @@ def add_smart_orbit_satellite_manual():
 add_satellite_button = Button(
     text="Add Satellite",
     color=color.gray,
-    position=(-0.64, 0.4),
+    position=(-0.7, 0.4),
     scale=(0.35, 0.05),
     text_size=5,
     on_click=add_smart_orbit_satellite_manual,
