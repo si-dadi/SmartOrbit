@@ -1,6 +1,5 @@
 from ursina import *
 
-# app = Ursina(development_mode = False)
 app = Ursina()
 
 window.title = "SafeOrbit"

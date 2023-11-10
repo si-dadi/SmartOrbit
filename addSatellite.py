@@ -1,4 +1,5 @@
 from ursina import *
+from ursina import destroy
 from ursina.shaders import lit_with_shadows_shader
 from ursina.prefabs.dropdown_menu import DropdownMenu, DropdownMenuButton
 
@@ -68,6 +69,12 @@ class SmartOrbitSatellite(Entity):
     def __str__(self):
         return f"SmartOrbitSatellite(name='{self.name}', semi_major_axis={self.semi_major_axis}, semi_minor_axis={self.semi_minor_axis}, inclination={self.inclination}, raan={self.raan}, argp={self.argp}, fuel_left={self.fuel_left}, priority={self.priority}, collision_threshold={self.collision_threshold}, position={self.position})"
 
+    def destroySatelliteEntity(self):
+        self.enabled = False  # Disabling the entity to hide it
+        # if self in satellites:
+        satellites.remove(self)
+        destroy(self)
+        self.color = color.black        #TODO: Find a proper way to delete this entity from scene!
     def update(self):
         dt_factor = getTimeFactor() / 1e5
         dt = time.dt * dt_factor
@@ -223,7 +230,8 @@ def add_smart_orbit_satellite_manual():
         # print("Satellite data: ", satellites)
         update_camera_follow_buttons()  # Call the update function here
 
-
+# test = Entity(model = 'cube', scale=0.5, position = (10,10,10), color = color.red)
+# button = Button(text = 'Destroy', position=(0,0), scale = (0.1, 0.05), on_click = lambda: destroy(test))
 add_satellite_button = Button(
     text="Add Satellite",
     color=color.gray,
@@ -319,7 +327,7 @@ def predict_collision():
     satellitesSnapshot = getSatellites()
 
     if satellitesSnapshot.__len__() > 1:
-        start_time = time.perf_counter()
+        # start_time = time.perf_counter()
 
         for satellite in satellitesSnapshot:
             for moreSatellite in satellitesSnapshot:
@@ -332,16 +340,17 @@ def predict_collision():
                     moreSatellite.collision_threshold, satellite.collision_threshold
                 ):
                     collision_alerts.append(
-                        "Collision between "
+                        "Collision occured between "
                         + moreSatellite.name
                         + " and "
                         + satellite.name
-                        + " is predicted. distance: "
-                        + str(distance)
+                        + "!"
                     )
+                    satellite.destroySatelliteEntity()
+                    moreSatellite.destroySatelliteEntity()
 
-        end_time = time.perf_counter()
-        print("Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6))
+        # end_time = time.perf_counter()
+        # print("Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6))
 
 slider_value = 1      
 def getSliderValue():
@@ -485,6 +494,7 @@ def update():
     earth.rotation_y -= time.dt * getTimeFactor() * 360 / 86400
 
     update_alerts()
+    predict_collision()     # Continuously monitor for collisions and destroy satellites if collision occurs
 
     # current_time = time.time()
     # if current_time - last_predict_time >= 0.5:
