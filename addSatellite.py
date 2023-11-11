@@ -332,7 +332,8 @@ sampling_rate = hard_coded_sampling_rate if hard_coded_sampling_rate > worst_pre
 def update():
     global last_predict_time, sampling_rate
     if cameraShifted and following_satellite:
-        camera.position = 2 * following_satellite.position
+        target_position = 2 * following_satellite.position
+        camera.position = lerp(camera.position, target_position, 0.19)
         # camera.look_at(earth)   # TODO: Fix this
 
     earth.rotation_y -= time.dt * getTimeFactor() * 360 / 86400
