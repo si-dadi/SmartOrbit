@@ -5,6 +5,7 @@ from ursina.prefabs.dropdown_menu import DropdownMenu, DropdownMenuButton
 
 from poliastro.bodies import Earth
 from poliastro.twobody import Orbit
+from poliastro.maneuver import Maneuver
 
 from astropy import units as u
 
@@ -16,6 +17,8 @@ from timeControl import getTimeFactor
 from collisionAlerts import *
 import math
 import time
+
+import numpy as np
 
 satellites = []  # List of all satellites, *** to be used in ACAS prediction
 
@@ -74,7 +77,10 @@ class SmartOrbitSatellite(Entity):
         # if self in satellites:
         satellites.remove(self)
         destroy(self)
-        self.color = color.black        #TODO: Find a proper way to delete this entity from scene!
+        self.color = (
+            color.black
+        )  # TODO: Find a proper way to delete this entity from scene!
+
     def update(self):
         dt_factor = getTimeFactor() / 1e5
         dt = time.dt * dt_factor
@@ -230,8 +236,6 @@ def add_smart_orbit_satellite_manual():
         # print("Satellite data: ", satellites)
         update_camera_follow_buttons()  # Call the update function here
 
-# test = Entity(model = 'cube', scale=0.5, position = (10,10,10), color = color.red)
-# button = Button(text = 'Destroy', position=(0,0), scale = (0.1, 0.05), on_click = lambda: destroy(test))
 add_satellite_button = Button(
     text="Add Satellite",
     color=color.gray,
@@ -322,12 +326,10 @@ def calculate_euclidean_distance(vec1, vec2):
     dz = vec1[2] - vec2[2]
     return math.sqrt(dx * dx + dy * dy + dz * dz)
 
-
 def predict_collision():
     satellitesSnapshot = getSatellites()
 
     if satellitesSnapshot.__len__() > 1:
-        # start_time = time.perf_counter()
 
         for satellite in satellitesSnapshot:
             for moreSatellite in satellitesSnapshot:
@@ -349,10 +351,7 @@ def predict_collision():
                     satellite.destroySatelliteEntity()
                     moreSatellite.destroySatelliteEntity()
 
-        # end_time = time.perf_counter()
-        # print("Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6))
-
-slider_value = 1      
+slider_value = 1
 def getSliderValue():
     slider_value = int(time_range_slider.value)
     return slider_value
@@ -364,18 +363,30 @@ def getFutureTimes():
     future_times = [t for t in range(1, slider_value + 1, 1)]
     return future_times
 
-sliderText = Text(text = 'Select Predition Time (in hrs)', position = (0.5, 0.45), text_size = 5, scale=0.75)
+sliderText = Text(
+    text="Select Predition Time (in hrs)", position=(0.5, 0.45), text_size=5, scale=0.75
+)
+
 time_range_slider = Slider(
-    dynamic=True, min=1, max=24, default=1, step=1, x=0.5, y=0.4, bar_color = color.gray, scale=0.5, on_value_changed = getSliderValue
+    dynamic=True,
+    min=1,
+    max=24,
+    default=1,
+    step=1,
+    x=0.5,
+    y=0.4,
+    bar_color=color.gray,
+    scale=0.5,
+    on_value_changed=getSliderValue,
 )
 
 collision_button = Button(
-text="Predict Collisions",
-color=color.gray,
-position=(0.65, 0.35),
-scale=(0.35, 0.05),
-text_size=5,
-on_click=lambda: predict_future_collisions(future_times),
+    text="Predict Collisions",
+    color=color.gray,
+    position=(0.65, 0.35),
+    scale=(0.35, 0.05),
+    text_size=5,
+    on_click=lambda: predict_future_collisions(future_times),
 )
 
 def predict_future_collisions(future_times):
@@ -410,9 +421,7 @@ def predict_future_collisions(future_times):
                 ]
 
                 for idx, (pos1, pos2) in enumerate(
-                    zip(
-                        future_positions_satellite, future_positions_moreSatellite
-                    )
+                    zip(future_positions_satellite, future_positions_moreSatellite)
                 ):
                     relative_distance = calculate_euclidean_distance(
                         (pos1.r / u.km), (pos2.r / u.km)
@@ -431,60 +440,48 @@ def predict_future_collisions(future_times):
                         break  # Exit the loop if a collision is detected
 
         end_time = time.perf_counter()
-        print(
-            "Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6)
-        )
+        print("Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6))
+
+def lambert_transfer(satellite):
+    # Get the current epoch of the satellite's orbit
+    current_epoch = satellite.orbit.epoch
+    # Create a new orbit with modified parameters
+    modifications = Orbit.from_classical(
+        Earth,
+        satellite.semi_major_axis * 2 * u.km,
+        satellite.eccentricity * u.one,
+        satellite.inclination * u.deg,
+        satellite.raan * u.deg,
+        satellite.argp * u.deg,
+        0 * u.deg,
+    )
+
+    modifications.epoch.isot = current_epoch.isot
+
+    # try:
+    #     maneuver = Maneuver.lambert(satellite.orbit, modifications)
+    #     transfer_orbit, new_orbit = satellite.orbit.apply_maneuver(maneuver, intermediate=True)
+    #     print(maneuver, transfer_orbit, new_orbit)
+    # except AssertionError as e:
+    #     print(f"Error: {e}")
+    #     print(f"Current orbit: {satellite.orbit}")
+    #     print(f"New orbit: {modifications}")
+    #     return
 
 
-# optimization 1
-# TODO: Test Performance Metrics
-# import numpy as np
+def test_fn():
+    if satellites:
+        lambert_transfer(satellites[0])
+        print(satellites[0].orbit)
 
-# def predict_future_collisions(future_times):
-#     satellitesSnapshot = getSatellites()
-#     print("Called Me?...")
-#     num_satellites = len(satellitesSnapshot)
-#     if num_satellites > 1:
-#         start_time = time.perf_counter()
+test_btn = Button(
+    text="Fuck Orbit",
+    color=color.gray,
+    scale=(0.1, 0.05),
+    position=(-0.65, -0.35),
+    on_click=test_fn,
+)
 
-#         # Precompute future positions for all satellites
-#         future_positions = np.zeros((num_satellites, len(future_times), 3))
-
-#         for i, satellite in enumerate(satellitesSnapshot):
-#             satellite.orbit = Orbit.from_vectors(
-#                 Earth, satellite.orbit.r, satellite.orbit.v
-#             )
-#             future_positions[i] = np.array(
-#                 [
-#                     satellite.orbit.propagate((1 / 86400) * time * u.s).r.to(u.km).value
-#                     for time in future_times
-#                 ]
-#             )
-
-#         for i in range(num_satellites):
-#             for j in range(i + 1, num_satellites):
-#                 for idx, (pos1, pos2) in enumerate(
-#                     zip(future_positions[i], future_positions[j])
-#                 ):
-#                     relative_distance = calculate_euclidean_distance(
-#                         pos1, pos2
-#                     )
-
-#                     if relative_distance <= max(
-#                         satellitesSnapshot[i].collision_threshold,
-#                         satellitesSnapshot[j].collision_threshold,
-#                     ):
-#                         collision_time = future_times[idx]
-#                         collision_alerts.append(
-#                             f"Collision predicted between {satellitesSnapshot[j].name} and {satellitesSnapshot[i].name} "
-#                             f"in {collision_time / 3600:.3f} hours!"
-#                         )
-#                         break  # Exit the time loop if a collision is detected
-
-#         end_time = time.perf_counter()
-#         print(
-#             "Time taken: {:.6f} microseconds".format((end_time - start_time) * 1e6)
-#         )
 
 def update():
     if cameraShifted and following_satellite:
@@ -494,9 +491,4 @@ def update():
     earth.rotation_y -= time.dt * getTimeFactor() * 360 / 86400
 
     update_alerts()
-    predict_collision()     # Continuously monitor for collisions and destroy satellites if collision occurs
-
-    # current_time = time.time()
-    # if current_time - last_predict_time >= 0.5:
-    #     predict_future_collisions(future_times)  # TODO: Call when user presses a button
-    #     last_predict_time = current_time
+    predict_collision()  # Continuously monitor for collisions and destroy satellites if collision occurs
