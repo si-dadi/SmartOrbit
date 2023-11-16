@@ -365,8 +365,9 @@ def getFutureTimes():
 # Set initial visibility to False
 slider_visible = False
 button_visible = False
+slider_text_visible = False
 sliderText = Text(
-    text="Select Predition Time (in hrs)", position=(0.5, 0.45), text_size=5, scale=0.75
+    text="Select Prediction Time (in hrs)", position=(0.5, 0.45), text_size=5, scale=0.75, visible=slider_text_visible
 )
 
 time_range_slider = Slider(
@@ -393,19 +394,22 @@ collision_button = Button(
     visible=button_visible,
 )
 def update_visibility():
-    global slider_visible, button_visible
+    global slider_visible, button_visible, slider_text_visible
     satellites_snapshot = getSatellites()
 
     # Check if there are at least 2 satellites in the scene
     if satellites_snapshot.__len__() > 1:
         slider_visible = True
         button_visible = True
+        slider_text_visible = True
     else:
         slider_visible = False
         button_visible = False
+        slider_text_visible = False
 
     time_range_slider.visible = slider_visible
     collision_button.visible = button_visible
+    sliderText.visible = slider_text_visible
 def predict_future_collisions(future_times):
     satellitesSnapshot = getSatellites()
     future_times = getFutureTimes()
