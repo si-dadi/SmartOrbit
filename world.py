@@ -7,14 +7,18 @@ window.borderless = False
 window.exit_button.visible = False
 window.fps_counter.enabled = True
 
-sun_light1 = DirectionalLight(color=color.white, y=60, z=-90, shadows=True, range=100)
-sun_light1.rotation = (10, 30, 30)
-sun_light2 = DirectionalLight(color=color.white, y=60, z=-90, shadows=True, range=100)
-sun_light2.rotation = (10, 30, 30)
-sun_light3 = DirectionalLight(color=color.white, y=60, z=-90, shadows=True, range=100)
-sun_light3.rotation = (10, 30, 30)
-sun_light = DirectionalLight(color=color.yellow, y=60, z=-90, shadows=True, range=100)
-sun_light.rotation = (10, 30, 30)
+
+def letThereBeLight():
+    sun_light1 = DirectionalLight(color=color.white, y=60, z=-90, shadows=True, range=100)
+    sun_light1.rotation = (10, 30, 30)
+    sun_light2 = DirectionalLight(color=color.white, y=60, z=-90, shadows=True, range=100)
+    sun_light2.rotation = (10, 30, 30)
+    sun_light3 = DirectionalLight(color=color.white, y=60, z=-90, shadows=True, range=100)
+    sun_light3.rotation = (10, 30, 30)
+    sun_light = DirectionalLight(color=color.yellow, y=60, z=-90, shadows=True, range=100)
+    sun_light.rotation = (10, 30, 30)
+
+letThereBeLight()
 
 earth = Entity(model="models/EarthClouds_1_12756.glb", scale=0.002, position=(0, 0, 0), render_queue=1)
 
