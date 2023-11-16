@@ -362,7 +362,9 @@ def getFutureTimes():
     slider_value = getSliderValue()
     future_times = [t for t in range(1, slider_value + 1, 1)]
     return future_times
-
+# Set initial visibility to False
+slider_visible = False
+button_visible = False
 sliderText = Text(
     text="Select Predition Time (in hrs)", position=(0.5, 0.45), text_size=5, scale=0.75
 )
@@ -378,6 +380,7 @@ time_range_slider = Slider(
     bar_color=color.gray,
     scale=0.5,
     on_value_changed=getSliderValue,
+    visible=slider_visible,
 )
 
 collision_button = Button(
@@ -387,8 +390,22 @@ collision_button = Button(
     scale=(0.35, 0.05),
     text_size=5,
     on_click=lambda: predict_future_collisions(future_times),
+    visible=button_visible,
 )
+def update_visibility():
+    global slider_visible, button_visible
+    satellites_snapshot = getSatellites()
 
+    # Check if there are at least 2 satellites in the scene
+    if satellites_snapshot.__len__() > 1:
+        slider_visible = True
+        button_visible = True
+    else:
+        slider_visible = False
+        button_visible = False
+
+    time_range_slider.visible = slider_visible
+    collision_button.visible = button_visible
 def predict_future_collisions(future_times):
     satellitesSnapshot = getSatellites()
     future_times = getFutureTimes()
@@ -485,10 +502,12 @@ test_btn = Button(
 
 def update():
     if cameraShifted and following_satellite:
-        camera.position = 2 * following_satellite.position
+        target_position = 2 * following_satellite.position
+        camera.position = lerp(camera.position, target_position, 0.19)
         # camera.look_at(earth)   # TODO: Fix this
 
     earth.rotation_y -= time.dt * getTimeFactor() * 360 / 86400
 
     update_alerts()
-    predict_collision()  # Continuously monitor for collisions and destroy satellites if collision occurs
+    predict_collision()# Continuously monitor for collisions and destroy satellites if collision occurs
+    update_visibility()
